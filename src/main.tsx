@@ -1,4 +1,4 @@
-import { createElement, ReactComponent, render } from "./react"
+import { createElement, ReactComponent, render, useState } from "./react"
 
 const container = document.getElementById("app")!
 
@@ -14,7 +14,33 @@ const List: ReactComponent<{ items: string[] }> = ({ items }) => {
   )
 }
 
-const App: ReactComponent<{ name: string }> = ({ name }) => {
+const Greeting: ReactComponent = () => {
+  const [name, setName] = useState("World")
+  return (
+    <section>
+      <input
+        onInput={(e: Event) => setName(() => (e.target as HTMLInputElement).value)}
+        value={name}
+      />
+      <p>Hello, {name}!</p>
+      <button onClick={() => alert(`Hello, ${name}!`)}>greet</button>
+    </section>
+  )
+}
+
+const Counter: ReactComponent = () => {
+  const [count, setCount] = useState(0)
+  return (
+    <section>
+      <button onClick={() => setCount(prev => prev + 1)}>+</button>
+      <span>{count}</span>
+      <button onClick={() => setCount(prev => prev - 1)}>-</button>
+      <button onClick={() => setCount(() => 0)}>reset</button>
+    </section>
+  )
+}
+
+const App: ReactComponent = () => {
   return (
     <div id="foo">
       <h1 className="heading">Hello, World!</h1>
@@ -22,19 +48,8 @@ const App: ReactComponent<{ name: string }> = ({ name }) => {
         <p>proto react test</p>
         <a href="#">link</a>
       </div>
-      <div>
-        <button onClick={() => alert("hello")}>greet</button>
-      </div>
-      <div>
-        <input
-          onInput={(e: Event) => {
-            const name = (e.target as HTMLInputElement).value
-            render(<App name={name} />, container)
-          }}
-          value={name}
-        />
-        <p>Hello, {name}!</p>
-      </div>
+      <Greeting />
+      <Counter />
       <List items={["Alex", "Ben", "Curry"]} />
     </div>
   )
