@@ -10,9 +10,11 @@ type ReactFiber = {
 type ReactElementProps = Record<string, any> & { children: ReactElement[] }
 
 export type ReactElement = {
-  type: string
+  type: string | ReactComponent
   props: ReactElementProps
 } & ReactFiber
+
+export type ReactComponent<Props = unknown> = (props: Props) => ReactElement
 
 type FiberWork = ReactElement | null | undefined
 
@@ -38,9 +40,9 @@ export const createElement: CreateElement = (type, props, ...children) => {
     type,
     props: {
       ...props,
-      children: children.map(child =>
-        typeof child === "object" ? child : createTextElement(child)
-      )
+      children: children
+        .flat()
+        .map(child => (typeof child === "object" ? child : createTextElement(child)))
     }
   }
 }
@@ -122,19 +124,35 @@ const commitRoot = () => {
 }
 
 const commitWork = (fiber: FiberWork) => {
-  if (!fiber || !fiber.parent?.dom) return
+  if (!fiber) return
 
-  const parent = fiber.parent.dom
+  // fibers of function components do not have DOM nodes
+  // find the parent of a DOM node
+  let parentFiber = fiber.parent
+  while (!parentFiber?.dom) {
+    parentFiber = parentFiber?.parent
+  }
+  const parentDOM = parentFiber.dom
+
   if (fiber.effectTag === "PLACEMENT" && fiber.dom != null) {
-    parent.appendChild(fiber.dom)
+    parentDOM.appendChild(fiber.dom)
   } else if (fiber.effectTag === "UPDATE" && fiber.dom != null) {
     updateDOM(fiber.dom, fiber.alternate!.props, fiber.props)
   } else if (fiber.effectTag === "DELETION" && fiber.dom != null) {
-    parent.removeChild(fiber.dom)
+    commitDeletion(fiber, parentDOM)
   }
 
   commitWork(fiber.child)
   commitWork(fiber.sibling)
+}
+
+const commitDeletion = (fiber: FiberWork, parentDOM: Node) => {
+  // find the child fiber with a DOM node
+  if (fiber?.dom) {
+    parentDOM.removeChild(fiber.dom)
+  } else {
+    commitDeletion(fiber?.child, parentDOM)
+  }
 }
 
 const reconcileChildren = (wipFiber: ReactElement, elements: ReactElement[]) => {
@@ -196,13 +214,27 @@ const reconcileChildren = (wipFiber: ReactElement, elements: ReactElement[]) => 
   }
 }
 
-const performUnitOfWork = (fiber: ReactElement) => {
+const updateFunctionComponent = (fiber: ReactElement) => {
+  const component = fiber.type as ReactComponent
+  const children = [component(fiber.props)]
+  reconcileChildren(fiber, children)
+}
+
+const updateHostComponent = (fiber: ReactElement) => {
   if (!fiber.dom) {
     fiber.dom = createDOM(fiber)
   }
+  reconcileChildren(fiber, fiber.props.children)
+}
 
-  const elements = fiber.props.children
-  reconcileChildren(fiber, elements)
+const performUnitOfWork = (fiber: ReactElement) => {
+  const isFunctionComponent = fiber.type instanceof Function
+
+  if (isFunctionComponent) {
+    updateFunctionComponent(fiber)
+  } else {
+    updateHostComponent(fiber)
+  }
 
   if (fiber.child) {
     return fiber.child
