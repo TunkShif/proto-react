@@ -5,11 +5,14 @@ type ReactFiber = {
   sibling?: ReactElement | null
   alternate?: ReactElement | null
   effectTag?: "UPDATE" | "PLACEMENT" | "DELETION"
-  hooks?: ReactStateHook[] | null
+  states?: ReactStateHook[]
+  effects?: ReactEffectHook[]
 }
 
 type ReactStateHook<T = any> = { state: T; queue: ReactSetState<T>[] }
 type ReactSetState<T> = (prev: T) => T
+
+type ReactEffectHook = { handler: () => () => void; cleanup?: () => void }
 
 type ReactElementProps = Record<string, any> & { children: ReactElement[] }
 
@@ -41,9 +44,9 @@ export const createElement = (
     type,
     props: {
       ...props,
-      children: children
-        .flat()
-        .map(child => (typeof child === "object" ? child : createTextElement(child)))
+      children: children.map(child =>
+        typeof child === "object" ? child : createTextElement(child)
+      )
     }
   }
 }
@@ -139,7 +142,7 @@ const commitWork = (fiber: Fiber) => {
     parentDOM.appendChild(fiber.dom)
   } else if (fiber.effectTag === "UPDATE" && fiber.dom != null) {
     updateDOM(fiber.dom, fiber.alternate!.props, fiber.props)
-  } else if (fiber.effectTag === "DELETION" && fiber.dom != null) {
+  } else if (fiber.effectTag === "DELETION") {
     commitDeletion(fiber, parentDOM)
   }
 
@@ -168,7 +171,7 @@ const reconcileChildren = (wipFiber: ReactElement, elements: ReactElement[]) => 
 
     // if the old fiber and the new element have the same type,
     // we keep the DOM node and just update it with the new props
-    const isSameType = oldFiber && element && element.type === oldFiber.type
+    const isSameType = oldFiber && element && element.type == oldFiber.type
     if (isSameType) {
       newFiber = {
         type: oldFiber!.type,
@@ -216,12 +219,13 @@ const reconcileChildren = (wipFiber: ReactElement, elements: ReactElement[]) => 
 }
 
 let wipFiber: Fiber = null
-let hookIndex = -1
+let stateHookIndex = -1
+let effectHookIndex = -1
 
 const updateFunctionComponent = (fiber: ReactElement) => {
   wipFiber = fiber
-  hookIndex = 0
-  wipFiber.hooks = []
+  stateHookIndex = 0
+  wipFiber.states = []
 
   const component = fiber.type as ReactComponent
   const children = [component(fiber.props)]
@@ -232,7 +236,7 @@ const updateHostComponent = (fiber: ReactElement) => {
   if (!fiber.dom) {
     fiber.dom = createDOM(fiber)
   }
-  reconcileChildren(fiber, fiber.props.children)
+  reconcileChildren(fiber, fiber.props.children.flat())
 }
 
 const performUnitOfWork = (fiber: ReactElement) => {
@@ -276,8 +280,8 @@ export const useState = <T>(initial: T): [T, (setter: ReactSetState<T>) => void]
   const oldHook =
     wipFiber &&
     wipFiber.alternate &&
-    wipFiber.alternate.hooks &&
-    wipFiber.alternate.hooks[hookIndex]
+    wipFiber.alternate.states &&
+    wipFiber.alternate.states[stateHookIndex]
 
   const hook = {
     state: oldHook ? oldHook.state : initial,
@@ -301,8 +305,29 @@ export const useState = <T>(initial: T): [T, (setter: ReactSetState<T>) => void]
     deletions = []
   }
 
-  wipFiber?.hooks?.push(hook)
-  hookIndex++
+  wipFiber?.states?.push(hook)
+  stateHookIndex++
 
   return [hook.state, setState]
+}
+
+export const useEffect = (handler: () => (() => void) | void) => {
+  const oldHook =
+    wipFiber &&
+    wipFiber.alternate &&
+    wipFiber.alternate.effects &&
+    wipFiber.alternate.effects[effectHookIndex]
+
+  const hook = {
+    handler: oldHook ? oldHook.handler : handler,
+    cleanup: oldHook ? oldHook.cleanup : null
+  } as ReactEffectHook
+
+  // TODO
+  const cleanup = handler()
+  if (cleanup) hook.cleanup = cleanup
+
+  wipFiber?.effects?.push(hook)
+
+  effectHookIndex++
 }

@@ -1,4 +1,4 @@
-import { createElement, ReactComponent, render, useState } from "./react"
+import { createElement, ReactComponent, render, useEffect, useState } from "./react"
 
 const container = document.getElementById("app")!
 
@@ -40,6 +40,20 @@ const Counter: ReactComponent = () => {
   )
 }
 
+const Effect: ReactComponent = () => {
+  return <div>Effect test</div>
+}
+
+const EffectTest: ReactComponent = () => {
+  const [show, setShow] = useState(true)
+  return (
+    <section>
+      <button onClick={() => setShow(prev => !prev)}>toggle</button>
+      {show && <Effect />}
+    </section>
+  )
+}
+
 const App: ReactComponent = () => {
   return (
     <div id="foo">
@@ -51,6 +65,7 @@ const App: ReactComponent = () => {
       <Greeting />
       <Counter />
       <List items={["Alex", "Ben", "Curry"]} />
+      <EffectTest />
     </div>
   )
 }
