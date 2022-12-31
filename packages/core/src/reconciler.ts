@@ -148,11 +148,14 @@ const commitWork = (fiber: ReactFiber | null) => {
     return
   }
 
+  lifecycle.onBeforeRendered?.(fiber) // ??? when to call
+
   commitWork(fiber.child ?? null)
   commitWork(fiber.sibling ?? null)
 }
 
 const commitDeletion = (fiber: ReactFiber, parentNode: Node) => {
+  lifecycle.onBeforeUnmount?.(fiber)
   if (fiber.domNode) {
     parentNode.removeChild(fiber.domNode)
   } else {

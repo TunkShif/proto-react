@@ -1,5 +1,5 @@
 import { render } from "@proto-react/core"
-import { useState } from "@proto-react/hooks"
+import { useEffect, useState } from "@proto-react/hooks"
 import type { ReactComponent } from "@proto-react/core"
 
 const container = document.getElementById("app")!
@@ -22,7 +22,7 @@ const Counter: ReactComponent = () => {
   return (
     <section>
       <h1>Counter</h1>
-      <div>
+      <div id={`count-${count}`}>
         <button onClick={increase}>+</button>
         <span>{count}</span>
         <button onClick={decrease}>-</button>
@@ -58,12 +58,44 @@ const List: ReactComponent<{ items: string[] }> = ({ items }) => {
   )
 }
 
+const Effect: ReactComponent = () => {
+  useEffect(() => {
+    console.log("effect running")
+    return () => {
+      console.log("effect disposed")
+    }
+  }, [])
+  return <h2>check console log</h2>
+}
+
+const Echo: ReactComponent = () => {
+  const [text, setTitle] = useState("Proto React")
+
+  const handleInput = (e: Event) => {
+    const target = e.target as HTMLInputElement
+    setTitle(() => target.value)
+  }
+
+  return (
+    <section>
+      <input onInput={handleInput} value="Proto React" />
+      <p>echo: {text}</p>
+    </section>
+  )
+}
+
 const App: ReactComponent = () => {
+  const [show, setShow] = useState(true)
   return (
     <div>
       <Counter />
       <Toggle />
       <List items={["A", "B", "C"]} />
+      <Echo />
+      <section>
+        <button onClick={() => setShow((prev) => !prev)}>toggle</button>
+        {show && <Effect />}
+      </section>
     </div>
   )
 }

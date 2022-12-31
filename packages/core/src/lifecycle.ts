@@ -7,6 +7,8 @@ export interface Lifecycle {
   deletions: ReactFiber[] | null
   requestRender(fiber: ReactFiber): void
   onBeforeWork?(fiber: ReactFiber): void
+  onBeforeRendered?(fiber: ReactFiber): void
+  onBeforeUnmount?(fiber: ReactFiber): void
 }
 
 export let lifecycle: Lifecycle = {
