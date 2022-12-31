@@ -124,7 +124,7 @@ const performUnitOfWork = (fiber: ReactFiber) => {
 }
 
 const commitRoot = () => {
-  deletions?.forEach(commitWork)
+  deletions?.splice(0).forEach(commitWork)
   commitWork(workingRootFiber?.child ?? null)
   committedRootFiber = workingRootFiber
   workingRootFiber = null
@@ -148,6 +148,7 @@ const commitWork = (fiber: ReactFiber | null) => {
     updateDOMNode(fiber.domNode, fiber.previous!.element.props, fiber.element.props)
   } else if (fiber.operation === "DELETION") {
     commitDeletion(fiber, parentNode)
+    return
   }
 
   commitWork(fiber.child ?? null)
