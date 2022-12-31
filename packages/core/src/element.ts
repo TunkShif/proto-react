@@ -24,11 +24,11 @@ export type ReactElement = {
 
 export type ReactComponent<Props extends Record<string, any> = any> = (props: Props) => ReactElement
 
-const createTextElement = (text: string): ReactElement => {
+const createTextElement = (text: string | number): ReactElement => {
   return {
     type: {
       tag: "text",
-      value: text
+      value: `${text}`
     },
     props: {},
     children: []
@@ -38,7 +38,7 @@ const createTextElement = (text: string): ReactElement => {
 export const createElement = (
   type: string | ReactComponent,
   props?: Record<string, any> | null,
-  ...children: (ReactElement | string | boolean | null | undefined)[]
+  ...children: (ReactElement | number | string | boolean | null | undefined)[]
 ): ReactElement => {
   const isComponent = type instanceof Function
   return {
@@ -49,9 +49,13 @@ export const createElement = (
     },
     props: props ?? {},
     children: children
-      .filter((child) => typeof child === "string" || typeof child === "object")
+      .flat()
+      .filter(
+        (child) =>
+          typeof child === "number" || typeof child === "string" || typeof child === "object"
+      )
       .map((child) =>
-        typeof child === "string" ? createTextElement(child) : child
+        typeof child === "string" || typeof child === "number" ? createTextElement(child) : child
       ) as ReactElement[]
   }
 }

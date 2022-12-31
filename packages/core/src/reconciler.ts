@@ -1,4 +1,4 @@
-import type { ReactElement } from "./element"
+import type { ReactComponent, ReactElement } from "./element"
 
 export type ReactFiber = {
   element: ReactElement
@@ -10,6 +10,12 @@ export type ReactFiber = {
   operation?: "CREATION" | "UPDATE" | "DELETION"
 }
 
+declare global {
+  interface Node {
+    __fiber?: ReactFiber
+  }
+}
+
 const createDOMNode = (fiber: ReactFiber) => {
   const elementType = fiber.element.type
   let domNode: Node =
@@ -19,16 +25,14 @@ const createDOMNode = (fiber: ReactFiber) => {
 
   updateDOMNode(domNode, {}, fiber.element.props)
 
-  {
-    // debug
-    ; (domNode as any).__fiber = fiber
-  }
+  // for debug purpose
+  domNode.__fiber = fiber
 
   return domNode
 }
 
 const isEvent = (key: string) => key.startsWith("on")
-const isAttribute = (key: string) => !isEvent(key)
+const isAttribute = (key: string) => key !== "children" && !isEvent(key)
 const updateDOMNode = (
   node: Node,
   prevProps: Record<string, any>,
@@ -94,7 +98,8 @@ requestIdleCallback(workLoop)
 const performUnitOfWork = (fiber: ReactFiber) => {
   const isComponent = fiber.element.type.tag === "component"
   if (isComponent) {
-    // TODO: function component
+    const component = fiber.element.type.value as ReactComponent
+    reconcileChildren(fiber, [component(fiber.element.props)])
   } else {
     // create the actual DOM node if the fiber doesn't have one
     if (!fiber.domNode) {
@@ -151,8 +156,7 @@ const commitWork = (fiber: ReactFiber | null) => {
 
 const commitDeletion = (fiber: ReactFiber, parentNode: Node) => {
   if (fiber.domNode) {
-    const removed = parentNode.removeChild(fiber.domNode)
-    console.log("removed: ", removed)
+    parentNode.removeChild(fiber.domNode)
   } else {
     commitDeletion(fiber.child!, parentNode)
   }
