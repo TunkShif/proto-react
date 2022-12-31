@@ -16,7 +16,7 @@ type ElementType =
     value: undefined
   }
 
-export type ReactElement = {
+export interface ReactElement {
   type: ElementType
   props: Record<string, any>
   children: ReactElement[]

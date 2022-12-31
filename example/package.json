@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@proto-react/core": "workspace:*",
+    "@proto-react/hooks": "workspace:*",
     "@proto-react/jsx-runtime": "workspace:*"
   },
   "devDependencies": {

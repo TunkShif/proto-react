@@ -1,6 +1,7 @@
+import { lifecycle } from "./lifecycle"
 import type { ReactComponent, ReactElement } from "./element"
 
-export type ReactFiber = {
+export interface ReactFiber {
   element: ReactElement
   domNode?: Node | null
   parent?: ReactFiber | null
@@ -70,23 +71,18 @@ const updateDOMNode = (
     .forEach((key) => ((node as any)[key] = nextProps[key]))
 }
 
-let workingRootFiber: ReactFiber | null = null
-let committedRootFiber: ReactFiber | null = null
-let nextUnitOfWork: ReactFiber | null = null
-let deletions: ReactFiber[] | null = null
-
 const workLoop = (deadline: IdleDeadline) => {
   // yield when the browser is busy
   let shouldYield = false
 
-  while (nextUnitOfWork && !shouldYield) {
-    nextUnitOfWork = performUnitOfWork(nextUnitOfWork)
+  while (lifecycle.nextUnitOfWork && !shouldYield) {
+    lifecycle.nextUnitOfWork = performUnitOfWork(lifecycle.nextUnitOfWork)
     shouldYield = deadline.timeRemaining() < 1
   }
 
   // when there's no more fiber work unit, then the entire
   // root fiber tree is done, so we commit the root fiber
-  if (!nextUnitOfWork && workingRootFiber) {
+  if (!lifecycle.nextUnitOfWork && lifecycle.wipRootFiber) {
     commitRoot()
   }
 
@@ -96,6 +92,7 @@ const workLoop = (deadline: IdleDeadline) => {
 requestIdleCallback(workLoop)
 
 const performUnitOfWork = (fiber: ReactFiber) => {
+  lifecycle.onBeforeWork?.(fiber)
   const isComponent = fiber.element.type.tag === "component"
   if (isComponent) {
     const component = fiber.element.type.value as ReactComponent
@@ -124,10 +121,10 @@ const performUnitOfWork = (fiber: ReactFiber) => {
 }
 
 const commitRoot = () => {
-  deletions?.splice(0).forEach(commitWork)
-  commitWork(workingRootFiber?.child ?? null)
-  committedRootFiber = workingRootFiber
-  workingRootFiber = null
+  lifecycle.deletions?.splice(0).forEach(commitWork)
+  commitWork(lifecycle.wipRootFiber?.child ?? null)
+  lifecycle.committedRootFiber = lifecycle.wipRootFiber
+  lifecycle.wipRootFiber = null
 }
 
 const commitWork = (fiber: ReactFiber | null) => {
@@ -211,7 +208,7 @@ const reconcileChildren = (fiber: ReactFiber, elements: ReactElement[]) => {
     // we remove the old DOM node
     if (oldChild && !isSameType) {
       oldChild.operation = "DELETION"
-      deletions?.push(oldChild)
+      lifecycle.deletions?.push(oldChild)
     }
 
     // move to the next old child of the current fiber
@@ -230,15 +227,13 @@ const reconcileChildren = (fiber: ReactFiber, elements: ReactElement[]) => {
 }
 
 export const render = (element: ReactElement, container: Node) => {
-  workingRootFiber = {
+  lifecycle.requestRender({
     element: {
       type: { tag: "root", value: undefined },
       props: {},
       children: [element]
     },
     domNode: container,
-    previous: committedRootFiber
-  }
-  deletions = []
-  nextUnitOfWork = workingRootFiber
+    previous: lifecycle.committedRootFiber
+  })
 }

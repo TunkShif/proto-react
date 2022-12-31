@@ -1,45 +1,71 @@
 import { render } from "@proto-react/core"
+import { useState } from "@proto-react/hooks"
 import type { ReactComponent } from "@proto-react/core"
 
 const container = document.getElementById("app")!
 
-let count = 0
-let show = true
+const Counter: ReactComponent = () => {
+  const [count, setCount] = useState(0)
 
-const App: ReactComponent<{ show: boolean }> = ({ show }) => {
+  const increase = () => {
+    setCount((prev) => prev + 1)
+  }
+
+  const decrease = () => {
+    setCount((prev) => prev - 1)
+  }
+
+  const reset = () => {
+    setCount(0)
+  }
+
   return (
-    <div id="section">
-      <button
-        onClick={() => {
-          show = !show
-          renderer()
-        }}
-      >
-        Toggle
-      </button>
-      <hr />
-      {show && <p>Hello, World!</p>}
+    <section>
+      <h1>Counter</h1>
+      <div>
+        <button onClick={increase}>+</button>
+        <span>{count}</span>
+        <button onClick={decrease}>-</button>
+        <button onClick={reset}>reset</button>
+      </div>
+    </section>
+  )
+}
+
+const Toggle: ReactComponent = () => {
+  const [show, setShow] = useState(true)
+
+  return (
+    <section>
+      <h1>Toggle</h1>
+      <div>
+        <button onClick={() => setShow((prev) => !prev)}>Click</button>
+        {show && <p>Hello, World!</p>}
+      </div>
+    </section>
+  )
+}
+
+const List: ReactComponent<{ items: string[] }> = ({ items }) => {
+  return (
+    <section>
       <ul>
-        {[1, 2, 3].map((n) => (
-          <li>{n}</li>
+        {items.map((item) => (
+          <li>{item}</li>
         ))}
       </ul>
-      <div>
-        <button
-          onClick={() => {
-            count = count + 1
-            renderer()
-          }}
-        >
-          {count}
-        </button>
-      </div>
+    </section>
+  )
+}
+
+const App: ReactComponent = () => {
+  return (
+    <div>
+      <Counter />
+      <Toggle />
+      <List items={["A", "B", "C"]} />
     </div>
   )
 }
 
-const renderer = () => {
-  render(<App show={show} />, container)
-}
-
-renderer()
+render(<App />, container)
